@@ -1,12 +1,16 @@
 #Python libraries that we need to import for our bot
 import json
 import random
+import time
+
 from flask import Flask, request
 from pymessenger.bot import Bot
-import os 
+import os
+import threading
+
 app = Flask(__name__)
-PASSWORDS = json.loads('passwords.json')
-bot = Bot(PASSWORDS.ACCESS_TOKEN)
+PASSWORDS = json.load(open('passwords.json'))
+bot = Bot(PASSWORDS['ACCESS_TOKEN'])
 
 
 # We will receive messages that Facebook sends our bot at this endpoint
@@ -24,6 +28,7 @@ def receive_message():
        for event in output['entry']:
           messaging = event['messaging']
           for message in messaging:
+            print(message)
             if message.get('message'):
                 # Facebook Messenger ID for user so we know where to send response back to
                 recipient_id = message['sender']['id']
@@ -40,7 +45,7 @@ def receive_message():
 def verify_fb_token(token_sent):
     # take token sent by facebook and verify it matches the verify token you sent
     #if they match, allow the request, else return an error 
-    if token_sent == PASSWORDS.VERIFY_TOKEN:
+    if token_sent == PASSWORDS['VERIFY_TOKEN']:
         return request.args.get("hub.challenge")
     return 'Invalid verification token'
 
@@ -59,5 +64,16 @@ def send_message(recipient_id, response):
     return "success"
 
 
+def send_message_delayed(recipient_id, message, delay):
+    def _send_message_delayed():
+        time.sleep(delay)
+        send_message(recipient_id, message)
+
+    thread = threading.Thread(target=_send_message_delayed)
+    thread.start()
+
+    return thread
+
 if __name__ == "__main__":
+    send_message_delayed(PASSWORDS['PEOPLE']['jordan'], "Hey!", 5)
     app.run()

@@ -41,6 +41,9 @@ class User:
     def newAdmin(cls, PFID: str, name: str):
         return cls(PFID, name, cls.Group.ADMIN)
 
+    def isAdmin(self):
+        return self.group == User.Group.ADMIN
+
 
 class Package:
     next_id = 0
@@ -52,7 +55,7 @@ class Package:
         self.collected = collected
 
     def __str__(self):
-        return '(Package num %d, code %d, received %s, collected %s)' % (self.id, self.code, self.date_received, self.collected)
+        return '(Package #%d, code %d, received %s, collected %s)' % (self.id, self.code, self.date_received, self.collected)
 
     def __eq__(self, other):
         if not isinstance(other, Package):
@@ -91,7 +94,10 @@ class PNBDatabase:
     def getUesr(self, PFID: int):
         self.cur.execute("SELECT * FROM users WHERE pfid = %s", (PFID, ))
         user = self.cur.fetchone()
-        return User(user[0], user[1], User.Group(user[2]))
+        if user is None:
+            return None
+        else:
+            return User(user[0], user[1], User.Group(user[2]))
 
     def removeUser(self, user: User):
         self.cur.execute("DELETE FROM users WHERE pfid = %s", (user.PFID, ))
@@ -104,7 +110,10 @@ class PNBDatabase:
     def getPackage(self, id):
         self.cur.execute("SELECT * FROM packages WHERE id = %s", (id,))
         package = self.cur.fetchone()
-        return Package(package[0], package[1], package[2], package[3])
+        if package is None:
+            return None
+        else:
+            return Package(package[0], package[1], package[2], package[3])
 
     def getUncollectedPackages(self):
         self.cur.execute("SELECT * FROM packages WHERE collected=False")

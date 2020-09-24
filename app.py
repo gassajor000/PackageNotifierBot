@@ -2,6 +2,7 @@
 import json
 import random
 import time
+import traceback
 
 from flask import Flask, request
 import os
@@ -34,7 +35,7 @@ def receive_message():
                    try:
                        packageNotifier.handle_message(message)
                    except Exception as e:
-                       print(e)
+                       traceback.print_exc()
 
     return "Message Processed"
 

@@ -24,6 +24,15 @@ class User:
     def __str__(self):
         return '(User %s, id %d, %s)' % (self.name, self.PFID, self.group)
 
+    def __eq__(self, other):
+        if not isinstance(other, User):
+            return False
+
+        if other is self:
+            return True
+
+        return self.PFID == other.PFID and self.name == other.name and self.group == other.group
+
     @classmethod
     def newUser(cls, PFID: int, name: str):
         return cls(PFID, name, cls.Group.USER)
@@ -44,6 +53,15 @@ class Package:
 
     def __str__(self):
         return '(Package %d, code %d, received %s, collected %s)' % (self.id, self.code, self.date_received, self.collected)
+
+    def __eq__(self, other):
+        if not isinstance(other, Package):
+            return False
+
+        if other is self:
+            return True
+
+        return self.id == other.id and self.code == other.code and self.date_received == other.date_received and self.collected == other.collected
 
     @classmethod
     def newPackage(cls, code: int, date_received: date):
@@ -80,16 +98,27 @@ class PNBDatabase:
         self.conn.commit()
 
     def addPackage(self, package:Package):
-        pass
+        self.cur.execute("INSERT INTO packages (id, code, date_received, collected) VALUES (%s, %s, %s, %s)", (package.id, package.code, package.date_received, package.collected))
+        self.conn.commit()
 
     def getPackage(self, id):
-        pass
+        self.cur.execute("SELECT * FROM packages WHERE id = %s", (id,))
+        package = self.cur.fetchone()
+        return Package(package[0], package[1], package[2], package[3])
 
-    def getUnclaimedPackages(self):
-        pass
+    def getUncollectedPackages(self):
+        self.cur.execute("SELECT * FROM packages WHERE collected=False")
+        package = self.cur.fetchone()
+        packages = []
+        while package is not None:
+            packages.append(Package(package[0], package[1], package[2], package[3]))
+            package = self.cur.fetchone()
+
+        return packages
 
     def claimPackage(self, package: Package):
-        pass
+        self.cur.execute("UPDATE packages SET collected=True WHERE id=%s", (package.id,))
+        self.conn.commit()
 
 
 if __name__ == '__main__':

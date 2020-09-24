@@ -27,14 +27,14 @@ def receive_message():
         # get whatever message a user sent the bot
        output = request.get_json()
        for event in output['entry']:
-          messaging = event['messaging']
-          for message in messaging:
-            print(message)
-            if message.get('message'):
-                try:
-                    packageNotifier.handle_message(message)
-                except Exception as e:
-                    print(e)
+           messaging = event['messaging']
+           for message in messaging:
+               print(message)
+               if message.get('message'):
+                   try:
+                       packageNotifier.handle_message(message)
+                   except Exception as e:
+                       print(e)
 
     return "Message Processed"
 

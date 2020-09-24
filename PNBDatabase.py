@@ -52,7 +52,7 @@ class Package:
         self.collected = collected
 
     def __str__(self):
-        return '(Package %d, code %d, received %s, collected %s)' % (self.id, self.code, self.date_received, self.collected)
+        return '(Package num %d, code %d, received %s, collected %s)' % (self.id, self.code, self.date_received, self.collected)
 
     def __eq__(self, other):
         if not isinstance(other, Package):

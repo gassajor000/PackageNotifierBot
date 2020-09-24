@@ -1,4 +1,5 @@
 Flask==0.12.2
 pymessenger==0.0.7.0
 gunicorn==19.6.0
-psycopg2=2.8.6
+psycopg2==2.8.6
+easyimap==0.6.3

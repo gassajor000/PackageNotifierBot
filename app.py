@@ -7,12 +7,14 @@ import traceback
 from flask import Flask, request
 import os
 import threading
+import easyimap
 
 from PackageNotifier import PackageNotifier
 
-app = Flask(__name__)
 PASSWORDS = json.load(open('passwords.json'))
+app = Flask(__name__)
 packageNotifier = PackageNotifier(PASSWORDS['ACCESS_TOKEN'])
+imap = easyimap.connect(PASSWORDS['EMAIL_HOST'], PASSWORDS['EMAIL_ACCOUNT'], PASSWORDS['EMAIL_PASSWORD'])
 
 
 # We will receive messages that Facebook sends our bot at this endpoint
@@ -48,5 +50,21 @@ def verify_fb_token(token_sent):
     return 'Invalid verification token'
 
 
+def check_for_emails():
+    while True:
+        try:
+            new_mail = imap.unseen()
+
+            if new_mail:
+                for email in new_mail:
+                    print(email)
+
+            else:
+                print('no new emails')
+            time.sleep(20)
+        except:
+            traceback.print_exc()
+
 if __name__ == "__main__":
-    app.run()
+    # app.run()
+    check_for_emails()

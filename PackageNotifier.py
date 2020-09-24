@@ -2,6 +2,8 @@
     created by Jordan Gassaway, 9/23/2020
     PackageNotifier: Top Level class for business logic portion of package notifier app
 """
+import datetime
+
 import requests
 from pymessenger.bot import Bot
 from PNBDatabase import PNBDatabase, User, Package
@@ -18,6 +20,10 @@ class PackageNotifier:
     * list users - list all users"""
     HELP_TEXT_UNVERIFIED = """To subscribe to Package Notifier Bot, please respond with the correct password."""
     UNKNOWN_CMD_TEXT = """Sorry I don't know how to help with that. Type help for a list of commands."""
+
+    NEW_PACKAGE_NOTIFICATION_TEXT = """New package received (Package #{:d}) 
+Pickup code {} 
+Respond with 'claim package {:d}' to mark as collected"""
 
     FB_PROFILE_INFO_URL = "https://graph.facebook.com/{}?fields={}&access_token={}"
 
@@ -116,9 +122,16 @@ class PackageNotifier:
 
     def handle_email(self, email):
         """Handle a new email fetched from the server"""
+        # add package to db
+        package = Package.newPackage(12345, datetime.date.today())
+        self.db.addPackage(package)
+
+        # notify users
         users = self.db.getAllUsers()
+        msg = self.NEW_PACKAGE_NOTIFICATION_TEXT.format(package.id, package.code, package.id)
+
         for user in users:
-            self.bot.send_text_message(user.PFID, 'New package email received')
+            self.bot.send_text_message(user.PFID, msg)
 
     def get_user_name(self, pfid):
         data = requests.get(self.FB_PROFILE_INFO_URL.format(pfid, 'first_name,last_name', self.auth_token)).json()

@@ -22,13 +22,13 @@ class TestPNBDatabase(unittest.TestCase):
     def setUp(self):
         # Drop and recreate tables
         self.cur.execute('DROP TABLE IF EXISTS users, packages;')
-        self.cur.execute('CREATE TABLE users (pfid integer PRIMARY KEY, name varchar(40) NOT NULL, ugroup varchar(10) NOT NULL)')
+        self.cur.execute('CREATE TABLE users (pfid varchar(20) PRIMARY KEY, name varchar(40) NOT NULL, ugroup varchar(10) NOT NULL)')
         self.cur.execute('CREATE TABLE packages (id integer PRIMARY KEY, code integer NOT NULL, date_received date NOT NULL, collected bool)')
         self.cur.execute('GRANT SELECT, INSERT, UPDATE, DELETE ON users, packages TO test_pnb')
 
         # Prefill with some data
-        self.test_user1 = User(100, 'Harold Jenkins', User.Group.USER)
-        self.test_user2 = User(101, 'Stevie Wonder', User.Group.ADMIN)
+        self.test_user1 = User('100', 'Harold Jenkins', User.Group.USER)
+        self.test_user2 = User('101', 'Stevie Wonder', User.Group.ADMIN)
 
         self.cur.execute('INSERT INTO users (pfid, name, ugroup) VALUES (%s, %s, %s)', (self.test_user1.PFID,
                                                                                         self.test_user1.name,
@@ -60,7 +60,7 @@ class TestPNBDatabase(unittest.TestCase):
 
     def testAddUser(self):
         """addUser adds a user to the Users group"""
-        user = User.newUser(102, 'Reginald Hargreaves')
+        user = User.newUser('102', 'Reginald Hargreaves')
         self.db.addUser(user)
 
         self.cur.execute('SELECT * FROM users WHERE pfid=%s', (user.PFID,))
@@ -72,7 +72,7 @@ class TestPNBDatabase(unittest.TestCase):
 
     def testAddAdmin(self):
         """addUser adds a user to the Admins group"""
-        user = User.newAdmin(103, 'Dave')
+        user = User.newAdmin('103', 'Dave')
         self.db.addUser(user)
 
         self.cur.execute('SELECT * FROM users WHERE pfid=%s', (user.PFID,))

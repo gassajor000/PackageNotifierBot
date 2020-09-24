@@ -16,13 +16,13 @@ class User:
         def __str__(self):
             return self.value
 
-    def __init__(self, PFID: int, name: str, group: Group):
+    def __init__(self, PFID: str, name: str, group: Group):
         self.name = name
         self.PFID = PFID
         self.group = group
 
     def __str__(self):
-        return '(User %s, id %d, %s)' % (self.name, self.PFID, self.group)
+        return '(User %s, id %s, %s)' % (self.name, self.PFID, self.group)
 
     def __eq__(self, other):
         if not isinstance(other, User):
@@ -34,11 +34,11 @@ class User:
         return self.PFID == other.PFID and self.name == other.name and self.group == other.group
 
     @classmethod
-    def newUser(cls, PFID: int, name: str):
+    def newUser(cls, PFID: str, name: str):
         return cls(PFID, name, cls.Group.USER)
 
     @classmethod
-    def newAdmin(cls, PFID: int, name: str):
+    def newAdmin(cls, PFID: str, name: str):
         return cls(PFID, name, cls.Group.ADMIN)
 
 

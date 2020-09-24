@@ -99,6 +99,14 @@ class PNBDatabase:
         else:
             return User(user[0], user[1], User.Group(user[2]))
 
+    def getUesrByName(self, name: str):
+        self.cur.execute("SELECT * FROM users WHERE LOWER(name) = LOWER(%s)", (name, ))
+        user = self.cur.fetchone()
+        if user is None:
+            return None
+        else:
+            return User(user[0], user[1], User.Group(user[2]))
+
     def removeUser(self, user: User):
         self.cur.execute("DELETE FROM users WHERE pfid = %s", (user.PFID, ))
         self.conn.commit()

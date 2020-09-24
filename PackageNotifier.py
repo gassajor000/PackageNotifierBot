@@ -34,7 +34,7 @@ class PackageNotifier:
             # process menu command
             if text == 'hedwig' and user is None:
                 # add user to database
-                sender_name = 'Joe user'  # TODO get real name from server
+                sender_name = 'Joe User'  # TODO get real name from server
                 self.db.addUser(User.newUser(sender_pfid, sender_name))
 
                 # respond
@@ -42,7 +42,7 @@ class PackageNotifier:
 
             elif text == 'errol' and user is None:
                 # add admin to database
-                sender_name = 'Joe user'  # TODO get real name from server
+                sender_name = 'Joe User'  # TODO get real name from server
                 self.db.addUser(User.newAdmin(sender_pfid, sender_name))
 
                 # respond
@@ -59,24 +59,44 @@ class PackageNotifier:
             # Don't care?
             self.bot.send_text_message(sender_pfid, self.UNKNOWN_CMD_TEXT)
 
-    def handle_cmd(self, cmd: str, arg: str,  sender: User):
+    def handle_cmd(self, cmd: str, sender: User):
         if cmd == 'help':
             self.bot.send_text_message(sender.PFID, self.HELP_TEXT_ADMIN if sender.isAdmin() else self.HELP_TEXT)
 
         elif cmd == 'list packages':
             packages = self.db.getUncollectedPackages()
+            if len(packages) == 0:
+                self.bot.send_text_message(sender.PFID, "There are no unclaimed packages")
+                return
+
             for package in packages:
                 self.bot.send_text_message(sender.PFID, str(package))
 
-        elif cmd == 'claim package':
-            pass # TODO
+        elif cmd.startswith('claim package'):
+            package_id = int(cmd.split(' ')[2])
+            package = self.db.getPackage(package_id)
+
+            if package is None:
+                self.bot.send_text_message(sender.PFID, "No package found with ID: {}".format(package_id))
+                return
+
+            self.db.claimPackage(package)
+            self.bot.send_text_message(sender.PFID, "Package marked as collected")
 
         elif cmd == 'unsubscribe':
             self.db.removeUser(sender)
             self.bot.send_text_message(sender.PFID, 'You have been unsubscribed from this service')
 
-        elif cmd == 'remove user' and sender.isAdmin():
-            pass # TODO
+        elif cmd.startswith('remove user') and sender.isAdmin():
+            user_name = cmd[12:]
+            user = self.db.getUesrByName(user_name)
+
+            if user is None:
+                self.bot.send_text_message(sender.PFID, "No user found with name: {}".format(user_name))
+                return
+
+            self.db.removeUser(user)
+            self.bot.send_text_message(sender.PFID, "{} removed from service".format(user.name))
 
         else:
             # Send Error response

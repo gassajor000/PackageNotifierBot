@@ -2,6 +2,7 @@
     created by Jordan Gassaway, 9/23/2020
     PackageNotifier: Top Level class for business logic portion of package notifier app
 """
+import requests
 from pymessenger.bot import Bot
 from PNBDatabase import PNBDatabase, User, Package
 
@@ -17,9 +18,12 @@ class PackageNotifier:
     HELP_TEXT_UNVERIFIED = """To subscribe to Package Notifier Bot, please respond with the correct password."""
     UNKNOWN_CMD_TEXT = """Sorry I don't know how to help with that. Type help for a list of commands."""
 
+    FB_PROFILE_INFO_URL = "https://graph.facebook.com/{}?fields={}&access_token={}"
+
     def __init__(self, auth_token):
         self.db = PNBDatabase('pnb_test')
         self.db.login('test_pnb', 'secret_pwd')
+        self.auth_token = auth_token
 
         self.bot = Bot(auth_token)
 
@@ -34,19 +38,19 @@ class PackageNotifier:
             # process menu command
             if text == 'hedwig' and user is None:
                 # add user to database
-                sender_name = 'Joe User'  # TODO get real name from server
+                sender_name = self.get_user_name(sender_pfid)
                 self.db.addUser(User.newUser(sender_pfid, sender_name))
 
                 # respond
-                self.bot.send_text_message(sender_pfid, 'New User Added')
+                self.bot.send_text_message(sender_pfid, 'New User added')
 
             elif text == 'errol' and user is None:
                 # add admin to database
-                sender_name = 'Joe User'  # TODO get real name from server
+                sender_name = self.get_user_name(sender_pfid)
                 self.db.addUser(User.newAdmin(sender_pfid, sender_name))
 
                 # respond
-                self.bot.send_text_message(sender_pfid, 'New Admin Added')
+                self.bot.send_text_message(sender_pfid, 'New Admin added')
 
             elif user is not None:
                 self.handle_cmd(text, user)
@@ -105,4 +109,8 @@ class PackageNotifier:
 
     def handle_email(self, email):
         """Handle a new email fetched from the server"""
+
+    def get_user_name(self, pfid):
+        data = requests.get(self.FB_PROFILE_INFO_URL.format(pfid, 'first_name,last_name', self.auth_token)).json()
+        return data['first_name'] + ' ' + data['last_name']
 

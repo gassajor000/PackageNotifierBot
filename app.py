@@ -58,6 +58,7 @@ def check_for_emails():
             if new_mail:
                 for email in new_mail:
                     if 'package to pick up' in email.title:
+                        print(email)
                         packageNotifier.handle_email(email)
 
             else:
@@ -68,5 +69,6 @@ def check_for_emails():
             traceback.print_exc()
 
 if __name__ == "__main__":
-    # app.run()
-    check_for_emails()
+    imap_thread = threading.Thread(target=check_for_emails)
+    imap_thread.start()
+    app.run()

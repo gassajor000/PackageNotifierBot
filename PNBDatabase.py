@@ -26,17 +26,17 @@ class User:
 
     @classmethod
     def newUser(cls, PFID: int, name: str):
-        return cls(name, PFID, cls.Group.USER)
+        return cls(PFID, name, cls.Group.USER)
 
     @classmethod
     def newAdmin(cls, PFID: int, name: str):
-        return cls(name, PFID, cls.Group.ADMIN)
+        return cls(PFID, name, cls.Group.ADMIN)
 
 
 class Package:
     next_id = 0
 
-    def __init__(self, id:int, code: str, date_received: date, collected: bool):
+    def __init__(self, id:int, code: int, date_received: date, collected: bool):
         self.id = id
         self.code = code
         self.date_received = date_received
@@ -46,7 +46,7 @@ class Package:
         return '(Package %d, code %d, received %s, collected %s)' % (self.id, self.code, self.date_received, self.collected)
 
     @classmethod
-    def newPackage(cls, code: str, date_received: date):
+    def newPackage(cls, code: int, date_received: date):
         cls.next_id += 1
         return cls(id=cls.next_id, code=code, date_received=date_received, collected=False)
 
@@ -54,8 +54,11 @@ class Package:
 class PNBDatabase:
     """Manage connection to PostRegDB and provide wrapper for db operations"""
 
-    def init(self):
-        self.conn = psycopg2.connect("dbname=packagenotifierbot user=blah password=blah")
+    def __init__(self, db_name):
+        self.db_name = db_name
+
+    def login(self, user, password):
+        self.conn = psycopg2.connect("dbname={} user={} password={}".format(self.db_name, user, password))
         self.cur = self.conn.cursor()
 
     def close(self):
@@ -90,8 +93,8 @@ class PNBDatabase:
 
 
 if __name__ == '__main__':
-    db = PNBDatabase()
-    db.init()
+    db = PNBDatabase('packagenotificationbot')
+    db.login()
     # db.addUser(User.newAdmin('Jordan Gassaway', 1234))
     user = db.getUesr(1234)
     print(user)

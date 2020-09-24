@@ -124,11 +124,18 @@ class TestPNBDatabase(unittest.TestCase):
         self.assertEqual(self.test_user2.group, user.group, "Groups are not equal!")
 
     def testGetAllUsers(self):
-        """getUserByName gets the correct user from the database"""
+        """getAllUsers gets all the usersfrom the database"""
         users = self.db.getAllUsers()
 
         self.assertLessEqual(len(users), 2, "Returned extra users!")
         self.assertIn(self.test_user1, users, 'Missing User 1!')
+        self.assertIn(self.test_user2, users, 'Missing User 2!')
+
+    def testGetAllAdmins(self):
+        """getAllAdmins gets all the admins in the database"""
+        users = self.db.getAllAdmins()
+
+        self.assertLessEqual(len(users), 1, "Returned extra users!")
         self.assertIn(self.test_user2, users, 'Missing User 2!')
 
     def testGetPackage(self):

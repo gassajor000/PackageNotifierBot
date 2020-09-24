@@ -115,6 +115,16 @@ class PNBDatabase:
 
         return users
 
+    def getAllAdmins(self):
+        self.cur.execute("SELECT * FROM users WHERE ugroup=%s", (User.Group.ADMIN.value, ))
+        user = self.cur.fetchone()
+        users = []
+        while user is not None:
+            users.append(User(user[0], user[1], User.Group(user[2])))
+            user = self.cur.fetchone()
+
+        return users
+
     def getUesrByName(self, name: str):
         self.cur.execute("SELECT * FROM users WHERE LOWER(name) = LOWER(%s)", (name, ))
         user = self.cur.fetchone()

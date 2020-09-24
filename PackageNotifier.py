@@ -3,6 +3,7 @@
     PackageNotifier: Top Level class for business logic portion of package notifier app
 """
 import datetime
+import re
 
 import requests
 from pymessenger.bot import Bot
@@ -26,6 +27,8 @@ Pickup code {}
 Respond with 'claim package {:d}' to mark as collected"""
 
     FB_PROFILE_INFO_URL = "https://graph.facebook.com/{}?fields={}&access_token={}"
+
+    PACKAGE_CODE_RE = re.compile('([pP]ickup [cC]ode)\s*([0-9]+)')
 
     def __init__(self, auth_token):
         self.db = PNBDatabase('pnb_test')
@@ -122,8 +125,20 @@ Respond with 'claim package {:d}' to mark as collected"""
 
     def handle_email(self, email):
         """Handle a new email fetched from the server"""
+        # get code from email
+        match = self.PACKAGE_CODE_RE.search(email.body)
+        if not match:
+            msg = "Error: No pickup code found for email {}".format(email.body)
+            print(msg)
+            admins = self.db.getAllAdmins()
+            for admin in admins:
+                self.bot.send_text_message(admin.PFID, msg)
+            return
+
+        code = int(match.group(2))
+
         # add package to db
-        package = Package.newPackage(12345, datetime.date.today())
+        package = Package.newPackage(code, datetime.date.today())
         self.db.addPackage(package)
 
         # notify users

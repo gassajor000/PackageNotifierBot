@@ -57,10 +57,12 @@ def check_for_emails():
 
             if new_mail:
                 for email in new_mail:
-                    print(email)
+                    if 'package to pick up' in email.title:
+                        packageNotifier.handle_email(email)
 
             else:
-                print('no new emails')
+                # print('no new emails')
+                pass
             time.sleep(20)
         except:
             traceback.print_exc()

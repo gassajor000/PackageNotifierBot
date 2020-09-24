@@ -84,14 +84,16 @@ class TestPNBDatabase(unittest.TestCase):
 
     def testGetUser(self):
         """getUser retrieves a user from the database"""
-        user = self.db.getUesr(self.test_user1.PFID)
+        user = self.db.getUser(self.test_user1.PFID)
 
+        self.assertIsNotNone(user, 'No User was found!')
         self.assertEqual(self.test_user1.PFID, user.PFID,"PFIDs are not equal!")
         self.assertEqual(self.test_user1.name, user.name, "Names are not equal!")
         self.assertEqual(self.test_user1.group, user.group, "Groups are not equal!")
 
-        user = self.db.getUesr(self.test_user2.PFID)
+        user = self.db.getUser(self.test_user2.PFID)
 
+        self.assertIsNotNone(user, 'No User was found!')
         self.assertEqual(self.test_user2.PFID, user.PFID,"PFIDs are not equal!")
         self.assertEqual(self.test_user2.name, user.name, "Names are not equal!")
         self.assertEqual(self.test_user2.group, user.group, "Groups are not equal!")
@@ -104,6 +106,30 @@ class TestPNBDatabase(unittest.TestCase):
         user = self.cur.fetchone()
 
         self.assertIsNone(user)
+
+    def testGetUserByName(self):
+        """getUserByName gets the correct user from the database"""
+        user = self.db.getUesrByName(self.test_user1.name)
+
+        self.assertIsNotNone(user, 'No User was found!')
+        self.assertEqual(self.test_user1.PFID, user.PFID, "PFIDs are not equal!")
+        self.assertEqual(self.test_user1.name, user.name, "Names are not equal!")
+        self.assertEqual(self.test_user1.group, user.group, "Groups are not equal!")
+
+        user = self.db.getUesrByName(self.test_user2.name.upper())
+
+        self.assertIsNotNone(user, 'No User was found!')
+        self.assertEqual(self.test_user2.PFID, user.PFID, "PFIDs are not equal!")
+        self.assertEqual(self.test_user2.name, user.name, "Names are not equal!")
+        self.assertEqual(self.test_user2.group, user.group, "Groups are not equal!")
+
+    def testGetAllUsers(self):
+        """getUserByName gets the correct user from the database"""
+        users = self.db.getAllUsers()
+
+        self.assertLessEqual(len(users), 2, "Returned extra users!")
+        self.assertIn(self.test_user1, users, 'Missing User 1!')
+        self.assertIn(self.test_user2, users, 'Missing User 2!')
 
     def testGetPackage(self):
         """getPackage retrieves a package with the specified id"""

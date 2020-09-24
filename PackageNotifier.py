@@ -14,7 +14,8 @@ class PackageNotifier:
     * claim package [id] - mark the specified package as collected
     * unsubscribe - stop receiving package notifications and remove yourself from the system"""
     HELP_TEXT_ADMIN = HELP_TEXT + """
-    * remove user [name] - remove a user from the service"""
+    * remove user [name] - remove a user from the service
+    * list users - list all users"""
     HELP_TEXT_UNVERIFIED = """To subscribe to Package Notifier Bot, please respond with the correct password."""
     UNKNOWN_CMD_TEXT = """Sorry I don't know how to help with that. Type help for a list of commands."""
 
@@ -31,7 +32,7 @@ class PackageNotifier:
         """Handle a new message sent from messenger"""
         # Facebook Messenger ID for user so we know where to send response back to
         sender_pfid = message['sender']['id']
-        user = self.db.getUesr(sender_pfid)
+        user = self.db.getUser(sender_pfid)
 
         text = message['message'].get('text').lower()
         if text:
@@ -101,6 +102,12 @@ class PackageNotifier:
 
             self.db.removeUser(user)
             self.bot.send_text_message(sender.PFID, "{} removed from service".format(user.name))
+
+        elif cmd == 'list users' and sender.isAdmin():
+            users = self.db.getAllUsers()
+            msg = 'Users:\n' + '\n'.join([str(u) for u in users])
+
+            self.bot.send_text_message(sender.PFID, msg)
 
         else:
             # Send Error response

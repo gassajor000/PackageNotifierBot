@@ -24,6 +24,9 @@ class User:
     def __str__(self):
         return '(User %s, id %s, %s)' % (self.name, self.PFID, self.group)
 
+    def __repr__(self):
+        return str(self)
+
     def __eq__(self, other):
         if not isinstance(other, User):
             return False
@@ -56,6 +59,9 @@ class Package:
 
     def __str__(self):
         return '(Package #%d, code %d, received %s, collected %s)' % (self.id, self.code, self.date_received, self.collected)
+
+    def __repr__(self):
+        return str(self)
 
     def __eq__(self, other):
         if not isinstance(other, Package):
@@ -91,13 +97,23 @@ class PNBDatabase:
                                                                                         user.group.value))
         self.conn.commit()
 
-    def getUesr(self, PFID: int):
+    def getUser(self, PFID: int):
         self.cur.execute("SELECT * FROM users WHERE pfid = %s", (PFID, ))
         user = self.cur.fetchone()
         if user is None:
             return None
         else:
             return User(user[0], user[1], User.Group(user[2]))
+
+    def getAllUsers(self):
+        self.cur.execute("SELECT * FROM users")
+        user = self.cur.fetchone()
+        users = []
+        while user is not None:
+            users.append(User(user[0], user[1], User.Group(user[2])))
+            user = self.cur.fetchone()
+
+        return users
 
     def getUesrByName(self, name: str):
         self.cur.execute("SELECT * FROM users WHERE LOWER(name) = LOWER(%s)", (name, ))
@@ -142,7 +158,7 @@ if __name__ == '__main__':
     db = PNBDatabase('packagenotificationbot')
     db.login()
     # db.addUser(User.newAdmin('Jordan Gassaway', 1234))
-    user = db.getUesr(1234)
+    user = db.getUser(1234)
     print(user)
     db.removeUser(user)
     db.close()

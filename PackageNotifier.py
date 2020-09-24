@@ -116,6 +116,9 @@ class PackageNotifier:
 
     def handle_email(self, email):
         """Handle a new email fetched from the server"""
+        users = self.db.getAllUsers()
+        for user in users:
+            self.bot.send_text_message(user.PFID, 'New package email received')
 
     def get_user_name(self, pfid):
         data = requests.get(self.FB_PROFILE_INFO_URL.format(pfid, 'first_name,last_name', self.auth_token)).json()

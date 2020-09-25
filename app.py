@@ -2,15 +2,20 @@
 import json
 import random
 import time
+import traceback
+from imaplib import IMAP4
 
 from flask import Flask, request
-from pymessenger.bot import Bot
 import os
 import threading
+import easyimap
 
-app = Flask(__name__)
+from PackageNotifier import PackageNotifier
+
 PASSWORDS = json.load(open('passwords.json'))
-bot = Bot(PASSWORDS['ACCESS_TOKEN'])
+app = Flask(__name__)
+packageNotifier = PackageNotifier(PASSWORDS['ACCESS_TOKEN'])
+imap = easyimap.connect(PASSWORDS['EMAIL_HOST'], PASSWORDS['EMAIL_ACCOUNT'], PASSWORDS['EMAIL_PASSWORD'])
 
 
 # We will receive messages that Facebook sends our bot at this endpoint
@@ -26,19 +31,15 @@ def receive_message():
         # get whatever message a user sent the bot
        output = request.get_json()
        for event in output['entry']:
-          messaging = event['messaging']
-          for message in messaging:
-            print(message)
-            if message.get('message'):
-                # Facebook Messenger ID for user so we know where to send response back to
-                recipient_id = message['sender']['id']
-                if message['message'].get('text'):
-                    response_sent_text = get_message()
-                    send_message(recipient_id, response_sent_text)
-                # if user sends us a GIF, photo,video, or any other non-text item
-                if message['message'].get('attachments'):
-                    response_sent_nontext = get_message()
-                    send_message(recipient_id, response_sent_nontext)
+           messaging = event['messaging']
+           for message in messaging:
+               print(message)
+               if message.get('message'):
+                   try:
+                       packageNotifier.handle_message(message)
+                   except Exception as e:
+                       traceback.print_exc()
+
     return "Message Processed"
 
 
@@ -50,30 +51,30 @@ def verify_fb_token(token_sent):
     return 'Invalid verification token'
 
 
-# chooses a random message to send to the user
-def get_message():
-    sample_responses = ["You are stunning!", "We're proud of you.", "Keep on being you!", "We're greatful to know you :)"]
-    # return selected item to the user
-    return random.choice(sample_responses)
+def check_for_emails():
+    while True:
+        try:
+            new_mail = imap.unseen()
 
+            if new_mail:
+                for email in new_mail:
+                    if 'package to pick up' in email.title:
+                        print(email)
+                        packageNotifier.handle_email(email)
 
-# uses PyMessenger to send response to user
-def send_message(recipient_id, response):
-    # sends user the text message provided via input response parameter
-    bot.send_text_message(recipient_id, response)
-    return "success"
-
-
-def send_message_delayed(recipient_id, message, delay):
-    def _send_message_delayed():
-        time.sleep(delay)
-        send_message(recipient_id, message)
-
-    thread = threading.Thread(target=_send_message_delayed)
-    thread.start()
-
-    return thread
+            else:
+                # print('no new emails')
+                pass
+            time.sleep(20)
+        except IMAP4.abort:
+            # socket error, close & reopen socket
+            traceback.print_exc()
+            imap.quit()
+            imap = easyimap.connect(PASSWORDS['EMAIL_HOST'], PASSWORDS['EMAIL_ACCOUNT'], PASSWORDS['EMAIL_PASSWORD'])
+        except:
+            traceback.print_exc()
 
 if __name__ == "__main__":
-    send_message_delayed(PASSWORDS['PEOPLE']['jordan'], "Hey!", 5)
+    imap_thread = threading.Thread(target=check_for_emails)
+    imap_thread.start()
     app.run()

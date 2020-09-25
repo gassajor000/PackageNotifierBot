@@ -3,6 +3,7 @@ import json
 import random
 import time
 import traceback
+from imaplib import IMAP4
 
 from flask import Flask, request
 import os
@@ -65,6 +66,11 @@ def check_for_emails():
                 # print('no new emails')
                 pass
             time.sleep(20)
+        except IMAP4.abort:
+            # socket error, close & reopen socket
+            traceback.print_exc()
+            imap.quit()
+            imap = easyimap.connect(PASSWORDS['EMAIL_HOST'], PASSWORDS['EMAIL_ACCOUNT'], PASSWORDS['EMAIL_PASSWORD'])
         except:
             traceback.print_exc()
 

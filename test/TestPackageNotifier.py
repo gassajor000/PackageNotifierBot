@@ -16,50 +16,47 @@ class MockDB(mock.Mock):
     users = {}
     packages = {}
 
-    def __init__(self):
-        super(MockDB, self).__init__(spec=PNBDatabase)
-
     def addUser(self, user:User):
         self.users[user.PFID] = user
-        super(MockDB, self).addUser(user)
+        self._addUser(user)
 
     def getUser(self, PFID):
         u =  self.users.get(PFID)
-        super(MockDB, self).getUser(PFID)
+        self._getUser(PFID)
         return u
 
     def getAllUsers(self):
-        super(MockDB, self).getAllUsers()
+        self._getAllUsers()
         return self.users.values()
 
     def getAllAdmins(self):
-        super(MockDB, self).getAllAdmins()
+        self._getAllAdmins()
         admins = filter(lambda u: u.group == User.Group.ADMIN, self.users.values())
         return list(admins)
 
     def getUserByName(self, name):
-        super(MockDB, self).getUserByName()
+        self._getUserByName(name)
         users = filter(lambda u: u.name == name, self.users.values())
         return next(users)
 
     def removeUser(self, user:User):
-        super(MockDB, self).removeUser(user)
+        self._removeUser(user)
         self.users.pop(user.PFID)
 
     def addPackage(self, package:Package):
-        super(MockDB, self).addPackage(package)
+        self._addPackage(package)
         self.packages[package.id] = package
 
     def getPackage(self, id):
-        super(MockDB, self).getPackage(id)
+        self._getPackage(id)
         return self.packages.get(id)
 
     def claimPackage(self, package:Package):
-        super(MockDB, self).claimPackage(package)
-        self.packages[package.package.id].collected = True
+        self._claimPackage(package)
+        self.packages[package.id].collected = True
 
     def reset(self):
-        super(MockDB, self).reset()
+        self.reset_mock()
         self.users = {}
         self.packages = {}
 
@@ -72,12 +69,45 @@ class MockDB(mock.Mock):
             for package in packages:
                 self.packages[package.id] = package
 
-MOCK_DB = MockDB()
-MOCK_BOT = mock.Mock()
 
-modules = {'PNBDatabase.PNBDatabase': mock.MagicMock(return_value=MOCK_DB),
-           'requests': mock.Mock(),
-           'pymessenger.bot.Bot': mock.MagicMock(return_value=MOCK_BOT)}
+class MockRequestResult(mock.Mock):
+    @classmethod
+    def setUsers(cls, users):
+        cls.users = users
+
+    def __init__(self, url, *args, **kwargs):
+        super(MockRequestResult, self).__init__(*args, **kwargs)
+        self.url = url
+        self.pfid = 'something'
+
+    def json(self):
+        user = self.users.get(self.pfid)
+        if user:
+            first_name, last_name = user.name.split
+            return {'first_name': first_name, 'last_name': last_name}
+
+        return {'first_name': 'Unknown', 'last_name': 'Unknown'}
+
+class MockRequestLib(mock.Mock):
+    def get(self, url):
+        return MockRequestResult(url)
+
+class FakeMessage(dict):
+    """Stand in for a new facebook message"""
+    def __init__(self, sender: User, msg):
+        super(FakeMessage, self).__init__()
+        self['sender'] = {'id': sender.PFID}
+        self['message'] = {'text': msg}
+
+
+MOCK_DB = MockDB(name='mock db')
+MOCK_BOT = mock.Mock(name='mock bot')
+MOCK_PNBDATABASE_LIB = mock.MagicMock(return_value=MOCK_DB, name='mock db lib')
+MOCK_PYMESSENGER_LIB = mock.MagicMock(return_value=MOCK_BOT, name='mock pymessenger lib')
+
+modules = {'PNBDatabase': mock.MagicMock(PNBDatabase=MOCK_PNBDATABASE_LIB, User=User, Package=Package),
+           'requests': MockRequestLib(),
+           'pymessenger.bot': mock.MagicMock(Bot=MOCK_PYMESSENGER_LIB)}
 
 with mock.patch.dict('sys.modules', modules):
     from PackageNotifier import PackageNotifier
@@ -97,6 +127,16 @@ class TestPackageNotifier(unittest.TestCase):
         cls.test_package3 = Package.newPackage(9012, today)
         cls.test_package4 = Package.newPackage(3456, today)
 
+        cls.gobals = [MOCK_DB, MOCK_BOT, MOCK_PNBDATABASE_LIB, MOCK_PYMESSENGER_LIB]
+
+        users = {
+            '101': cls.test_user1,
+            '102': cls.test_user2,
+            '103': cls.test_user3,
+            '104': cls.test_user4,
+        }
+        MockRequestResult.setUsers(users)
+
 
     def setUp(self):
         # reset db
@@ -108,9 +148,35 @@ class TestPackageNotifier(unittest.TestCase):
 
     def testInit(self):
         """PackageNotifier correctly initialized database & Bot"""
+        pn = PackageNotifier('test_auth_token')
+
+        MOCK_PNBDATABASE_LIB.assert_called_once_with('pnb_test')
+        MOCK_DB.login.assert_called_once_with('test_pnb', 'secret_pwd')
+        MOCK_PYMESSENGER_LIB.assert_called_once_with('test_auth_token')
 
     def testAddUserCmd(self):
         """PackageNotifier successfully ads a new user or admin"""
+        pn = PackageNotifier('test_auth_token')
+
+        # Add a user
+        msg = FakeMessage(self.test_user4, 'hedwig')
+        pn.handle_message(msg)
+        self.assertEqual(MOCK_DB._addUser.call_count, 1)
+        self.assertIn(self.test_user4.PFID, MOCK_DB.users, "User was not added to the user table")
+        user = MOCK_DB.users.get(self.test_user4.PFID)
+        self.assertEqual(self.test_user4.PFID, user.PFID, "Wrong PFID was added")
+        self.assertEqual(User.Group.USER, user.group, "User was added to the wrong group")
+
+        MOCK_DB.reset()
+
+        # add an admin
+        msg = FakeMessage(self.test_user4, 'errol')
+        pn.handle_message(msg)
+        self.assertEqual(MOCK_DB._addUser.call_count, 1)
+        self.assertIn(self.test_user4.PFID, MOCK_DB.users, "Admin was not added to the user table")
+        user = MOCK_DB.users.get(self.test_user4.PFID)
+        self.assertEqual(self.test_user4.PFID, user.PFID, "Wrong PFID was added")
+        self.assertEqual(User.Group.ADMIN, user.group, "User was added to the wrong group")
 
     def testUnknownUser(self):
         """No commands work if a user is not registered"""

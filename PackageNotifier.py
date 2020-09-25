@@ -103,7 +103,7 @@ Respond with 'claim package {:d}' to mark as collected"""
 
         elif cmd.startswith('remove user') and sender.isAdmin():
             user_name = cmd[12:]
-            user = self.db.getUesrByName(user_name)
+            user = self.db.getUserByName(user_name)
 
             if user is None:
                 self.bot.send_text_message(sender.PFID, "No user found with name: {}".format(user_name))

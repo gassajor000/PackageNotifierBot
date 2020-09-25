@@ -109,14 +109,14 @@ class TestPNBDatabase(unittest.TestCase):
 
     def testGetUserByName(self):
         """getUserByName gets the correct user from the database"""
-        user = self.db.getUesrByName(self.test_user1.name)
+        user = self.db.getUserByName(self.test_user1.name)
 
         self.assertIsNotNone(user, 'No User was found!')
         self.assertEqual(self.test_user1.PFID, user.PFID, "PFIDs are not equal!")
         self.assertEqual(self.test_user1.name, user.name, "Names are not equal!")
         self.assertEqual(self.test_user1.group, user.group, "Groups are not equal!")
 
-        user = self.db.getUesrByName(self.test_user2.name.upper())
+        user = self.db.getUserByName(self.test_user2.name.upper())
 
         self.assertIsNotNone(user, 'No User was found!')
         self.assertEqual(self.test_user2.PFID, user.PFID, "PFIDs are not equal!")

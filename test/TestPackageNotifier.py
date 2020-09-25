@@ -36,7 +36,7 @@ class MockDB(mock.Mock):
 
     def getUserByName(self, name):
         self._getUserByName(name)
-        users = filter(lambda u: u.name == name, self.users.values())
+        users = filter(lambda u: u.name.lower() == name, self.users.values())
         return next(users)
 
     def removeUser(self, user:User):
@@ -78,7 +78,7 @@ class MockRequestResult(mock.Mock):
     def __init__(self, url, *args, **kwargs):
         super(MockRequestResult, self).__init__(*args, **kwargs)
         self.url = url
-        self.pfid = 'something'
+        self.pfid = 'something'     # TODO actually parse the URL
 
     def json(self):
         user = self.users.get(self.pfid)
@@ -126,8 +126,9 @@ class TestPackageNotifier(unittest.TestCase):
         cls.test_package2 = Package.newPackage(5678, today)
         cls.test_package3 = Package.newPackage(9012, today)
         cls.test_package4 = Package.newPackage(3456, today)
+        cls.test_package2.collected = True
 
-        cls.gobals = [MOCK_DB, MOCK_BOT, MOCK_PNBDATABASE_LIB, MOCK_PYMESSENGER_LIB]
+        cls.globals = [MOCK_DB, MOCK_BOT, MOCK_PNBDATABASE_LIB, MOCK_PYMESSENGER_LIB]
 
         users = {
             '101': cls.test_user1,
@@ -178,23 +179,74 @@ class TestPackageNotifier(unittest.TestCase):
         self.assertEqual(self.test_user4.PFID, user.PFID, "Wrong PFID was added")
         self.assertEqual(User.Group.ADMIN, user.group, "User was added to the wrong group")
 
-    def testUnknownUser(self):
-        """No commands work if a user is not registered"""
-
     def testHelpCmd(self):
         """Help command returns help text. Help text for users does not include admin commands."""
+        pn = PackageNotifier('test_auth_token')
+
+        # Query Help
+        msg = FakeMessage(self.test_user1, 'help')
+        pn.handle_message(msg)
+        MOCK_BOT.send_text_message.assert_called_once_with(self.test_user1.PFID, pn.HELP_TEXT_ADMIN)
+
+        MOCK_BOT.reset_mock()
+
+        msg = FakeMessage(self.test_user2, 'help')
+        pn.handle_message(msg)
+        MOCK_BOT.send_text_message.assert_called_once_with(self.test_user2.PFID, pn.HELP_TEXT)
+
+        self.assertNotIn('list users', pn.HELP_TEXT)
+        self.assertNotIn('remove user', pn.HELP_TEXT)
 
     def testListPackagesCmd(self):
         """list packages will list all unclaimed packages"""
+        pn = PackageNotifier('test_auth_token')
+
+        # Add a user
+        msg = FakeMessage(self.test_user1, 'list packages')
+        pn.handle_message(msg)
+        self.assertEqual(MOCK_BOT.send_text_message.call_count, 2)
+        msgs = MOCK_BOT.send_text_message.call_args
+
+        # TODO finish this
+        self.fail("Unfinished test!")
 
     def testClaimPackageCmd(self):
         """claim package will mark the package as collected"""
+        pn = PackageNotifier('test_auth_token')
+
+        # Claim a package
+        msg = FakeMessage(self.test_user1, 'claim package {:d}'.format(self.test_package1.id))
+        pn.handle_message(msg)
+        self.assertEqual(MOCK_BOT.send_text_message.call_count, 1, "System did not send a response")
+        MOCK_DB._claimPackage.assert_called_once_with(self.test_package1)
+        self.assertTrue(self.test_package1.collected, "Package was not marked as collected")
 
     def testUnsubscribeCmd(self):
         """unsubscribe removes the user from the system"""
+        pn = PackageNotifier('test_auth_token')
+
+        # Unsubscribe
+        msg = FakeMessage(self.test_user1, 'unsubscribe')
+        pn.handle_message(msg)
+        self.assertEqual(MOCK_BOT.send_text_message.call_count, 1, "System did not send a response")
+        MOCK_DB._removeUser.assert_called_once_with(self.test_user1)
 
     def testRemoveUserCmd(self):
         """remove user removes a user from the system. Cannot be called by non-admin."""
+        pn = PackageNotifier('test_auth_token')
+
+        # Try removing user with User privileges
+        msg = FakeMessage(self.test_user2, 'remove user Luther Hargreaves')
+        pn.handle_message(msg)
+        self.assertEqual(MOCK_BOT.send_text_message.call_count, 1, "System did not send a response")
+        MOCK_DB._removeUser.assert_not_called()
+
+        MOCK_BOT.reset_mock()
+
+        msg = FakeMessage(self.test_user1, 'remove user Luther Hargreaves')
+        pn.handle_message(msg)
+        self.assertEqual(MOCK_BOT.send_text_message.call_count, 1, "System did not send a response")
+        MOCK_DB._removeUser.assert_called_once_with(self.test_user3)
 
     def testListUsersCmd(self):
         """list users lists all active users. Cannot be called by non-admin."""
@@ -204,3 +256,6 @@ class TestPackageNotifier(unittest.TestCase):
 
     def testGetUserName(self):
         """when creating a new user, PackageNotifier correctly queries the Facebook API for the full name"""
+
+    def testUnknownUser(self):
+        """No commands work if a user is not registered"""

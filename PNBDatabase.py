@@ -125,7 +125,7 @@ class PNBDatabase:
 
         return users
 
-    def getUesrByName(self, name: str):
+    def getUserByName(self, name: str):
         self.cur.execute("SELECT * FROM users WHERE LOWER(name) = LOWER(%s)", (name, ))
         user = self.cur.fetchone()
         if user is None:

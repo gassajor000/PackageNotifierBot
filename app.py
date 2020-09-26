@@ -1,26 +1,21 @@
 #Python libraries that we need to import for our bot
 import json
-import time
 import traceback
-from imaplib import IMAP4
 
 from flask import Flask, request
 import os
 import threading
-import easyimap
 
 from PackageNotifier import PackageNotifier
 from PNBDatabase import PNBDatabase
+
+from check_email import poll_emails_periodically
 
 DEV_MODE = False
 
 
 class AppConfig():
-    def __init__(self, auth_token, verify_token, db_config: PNBDatabase.Config, user_passphrase, admin_passphrase,
-                 email_host, email_user, email_password):
-        self.email_password = email_password
-        self.email_user = email_user
-        self.email_host = email_host
+    def __init__(self, auth_token, verify_token, db_config: PNBDatabase.Config, user_passphrase, admin_passphrase):
         self.admin_passphrase = admin_passphrase
         self.user_passphrase = user_passphrase
         self.db_config = db_config
@@ -45,19 +40,15 @@ class AppConfig():
         else:
             raise RuntimeError('ERROR! No database variables are set!')
 
-        return AppConfig(os.environ.get('AUTH_TOKEN'), os.environ.get('VERIFY_TOKEN'),
-                         db_config,
-                         os.environ.get('USER_PASSPHRASE'), os.environ.get('ADMIN_PASSPHRASE'),
-                         os.environ.get('EMAIL_HOST'), os.environ.get('EMAIL_USER'), os.environ.get('EMAIL_PASSWORD'))
+        return AppConfig(os.environ.get('AUTH_TOKEN'), os.environ.get('VERIFY_TOKEN'), db_config,
+                         os.environ.get('USER_PASSPHRASE'), os.environ.get('ADMIN_PASSPHRASE'))
 
     @classmethod
     def from_file(cls, file):
         data = json.load(open(file))
         db_config = PNBDatabase.CredentialsConfig(data['DB_NAME'], data['DB_USER'], data['DB_PASSWORD'])
-        return AppConfig(data['AUTH_TOKEN'], data['VERIFY_TOKEN'],
-                         db_config,
-                         data['USER_PASSPHRASE'], data['ADMIN_PASSPHRASE'],
-                         data['EMAIL_HOST'], data['EMAIL_USER'], data['EMAIL_PASSWORD'])
+        return AppConfig(data['AUTH_TOKEN'], data['VERIFY_TOKEN'], db_config, data['USER_PASSPHRASE'],
+                         data['ADMIN_PASSPHRASE'])
 
 
 if DEV_MODE:
@@ -67,7 +58,6 @@ else:   # PROD MODE
 
 app = Flask(__name__)
 packageNotifier = PackageNotifier(config.to_pn_config())
-imap = easyimap.connect(config.email_host, config.email_user, config.email_password)
 
 
 # We will receive messages that Facebook sends our bot at this endpoint
@@ -94,6 +84,23 @@ def receive_message():
 
     return "Message Processed"
 
+class Email():
+    def __init__(self, title, body):
+        self.body = body
+        self.title = title
+
+
+@app.route("/email", methods=['POST'])
+def receive_email():
+    output = request.get_json()
+    if 'title' not in output or 'body' not in output:
+        print('Bad email object {}'.format(output))
+        return "Message Processed"
+
+    packageNotifier.handle_email(Email(output['title'], output['body']))
+
+    return "Message Processed"
+
 
 def verify_fb_token(token_sent):
     # take token sent by facebook and verify it matches the verify token you sent
@@ -103,33 +110,8 @@ def verify_fb_token(token_sent):
     return 'Invalid verification token'
 
 
-def check_for_emails():
-    global imap
-
-    while True:
-        try:
-            new_mail = imap.unseen()
-
-            if new_mail:
-                for email in new_mail:
-                    if 'package to pick up' in email.title:
-                        print(email)
-                        packageNotifier.handle_email(email)
-
-            else:
-                # print('no new emails')
-                pass
-            time.sleep(20)
-        except IMAP4.abort:
-            # socket error, close & reopen socket
-            traceback.print_exc()
-            imap.quit()
-            imap = easyimap.connect(config.email_host, config.email_user, config.email_password)
-        except:
-            traceback.print_exc()
-
-
 if __name__ == "__main__":
-    imap_thread = threading.Thread(target=check_for_emails)
+    imap_thread = threading.Thread(target=poll_emails_periodically, args=[20])
     imap_thread.start()
+
     app.run()

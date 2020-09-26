@@ -12,7 +12,7 @@ from PNBDatabase import PNBDatabase, User, Package
 
 
 class PackageNotifier:
-    class PNConfig():
+    class Config():
         def __init__(self, auth_token, db_name, db_user, db_password, user_passphrase, admin_passphrase):
             self.admin_passphrase = admin_passphrase
             self.user_passphrase = user_passphrase
@@ -40,7 +40,7 @@ Respond with 'claim package {:d}' to mark as collected"""
 
     PACKAGE_CODE_RE = re.compile('([pP]ickup [cC]ode)\\s*([0-9]+)')
 
-    def __init__(self, config: PNConfig):
+    def __init__(self, config: Config):
         self.config = config
         self.db = PNBDatabase(config.db_name)
         self.db.login(config.db_user, config.db_password)

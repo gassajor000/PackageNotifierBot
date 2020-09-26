@@ -94,7 +94,7 @@ class Email():
 def receive_email():
     output = request.get_json()
     if 'title' not in output or 'body' not in output:
-        print('Unknown message {}'.format(output))
+        print('Bad email object {}'.format(output))
         return "Message Processed"
 
     packageNotifier.handle_email(Email(output['title'], output['body']))

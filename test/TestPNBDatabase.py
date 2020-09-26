@@ -201,3 +201,14 @@ class TestPNBDatabase(unittest.TestCase):
         self.assertEqual(self.test_package1.date_received, date_received, "Dates are not equal!")
         self.assertEqual(True, collected, "Collected Status not set to True!")
 
+    def testNextPackageId(self):
+        """Package.next_id is set to MAX(id) from the database on login and the next package has that id."""
+        self.db.close()
+        Package.next_id = 0
+        self.db.login()
+
+        max_id = max([p.id for p in [self.test_package1, self.test_package2]])
+        self.assertEqual(max_id + 1, Package.next_id, "Next id was not set correctly!")
+
+        package = Package.newPackage(1234, datetime.date.today())
+        self.assertEqual(max_id + 1, package.id)

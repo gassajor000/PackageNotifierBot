@@ -73,9 +73,15 @@ class Package:
         return self.id == other.id and self.code == other.code and self.date_received == other.date_received and self.collected == other.collected
 
     @classmethod
+    def set_next_id(cls, next_id):
+        """This is necessary because resetting the server will reset next_id to 0, leading to duplicate package ids."""
+        cls.next_id = next_id
+
+    @classmethod
     def newPackage(cls, code: int, date_received: date):
+        id = cls.next_id
         cls.next_id += 1
-        return cls(id=cls.next_id, code=code, date_received=date_received, collected=False)
+        return cls(id=id, code=code, date_received=date_received, collected=False)
 
 
 class PNBDatabase:
@@ -109,6 +115,8 @@ class PNBDatabase:
         args, kwargs = self.config.get_connect_args()
         self.conn = psycopg2.connect(*args, **kwargs)
         self.cur = self.conn.cursor()
+
+        Package.set_next_id(self._get_max_package_id() + 1)
 
     def close(self):
         self.cur.close()
@@ -184,6 +192,11 @@ class PNBDatabase:
     def claimPackage(self, package: Package):
         self.cur.execute("UPDATE packages SET collected=True WHERE id=%s", (package.id,))
         self.conn.commit()
+
+    def _get_max_package_id(self):
+        """Return the largest package id in the database"""
+        self.cur.execute("SELECT MAX(id)FROM packages")
+        return int(self.cur.fetchone()[0])
 
 
 if __name__ == '__main__':

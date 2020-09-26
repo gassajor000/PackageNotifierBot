@@ -143,7 +143,7 @@ class TestPackageNotifier(unittest.TestCase):
         cls.test_user4 = User.newAdmin('104', 'Allison Hargreaves')
 
         cls.globals = [MOCK_DB, MOCK_BOT, MOCK_PNBDATABASE_LIB, MOCK_PYMESSENGER_LIB]
-        cls.config = PackageNotifier.Config('test_auth_token', 'db_config', 'user_pwd', 'admin_pwd')
+        cls.config = PackageNotifier.Config('test_auth_token', 'db_config', 'uS3R*_pwd', 'aDMin_&pwd')
         
         users = {
             '101': cls.test_user1,

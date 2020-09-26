@@ -51,7 +51,7 @@ Respond with 'claim package {:d}' to mark as collected"""
         sender_pfid = message['sender']['id']
         user = self.db.getUser(sender_pfid)
 
-        text = message['message'].get('text').lower()
+        text = message['message'].get('text')
         print("New message {} {!r}".format(text, text))
         print("Passphrases {} {!r} {} {!r}".format(self.config.user_passphrase, self.config.user_passphrase,
                                                     self.config.admin_passphrase, self.config.admin_passphrase))
@@ -74,7 +74,7 @@ Respond with 'claim package {:d}' to mark as collected"""
                 self.bot.send_text_message(sender_pfid, 'New Admin added')
 
             elif user is not None:
-                self.handle_cmd(text, user)
+                self.handle_cmd(text.lower(), user)
             else:
                 self.bot.send_text_message(sender_pfid, self.HELP_TEXT_UNVERIFIED)
 

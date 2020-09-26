@@ -143,8 +143,7 @@ class TestPackageNotifier(unittest.TestCase):
         cls.test_user4 = User.newAdmin('104', 'Allison Hargreaves')
 
         cls.globals = [MOCK_DB, MOCK_BOT, MOCK_PNBDATABASE_LIB, MOCK_PYMESSENGER_LIB]
-        cls.config = PackageNotifier.Config('test_auth_token', 'test_db_name', 'test_db_user', 'test_db_pwd',
-                                            'user_pwd', 'admin_pwd')
+        cls.config = PackageNotifier.Config('test_auth_token', 'db_config', 'user_pwd', 'admin_pwd')
         
         users = {
             '101': cls.test_user1,
@@ -179,8 +178,8 @@ class TestPackageNotifier(unittest.TestCase):
         """PackageNotifier correctly initialized database & Bot"""
         pn = PackageNotifier(self.config)
 
-        MOCK_PNBDATABASE_LIB.assert_called_once_with(self.config.db_name)
-        MOCK_DB.login.assert_called_once_with(self.config.db_user, self.config.db_password)
+        MOCK_PNBDATABASE_LIB.assert_called_once_with(self.config.db_config)
+        MOCK_DB.login.assert_called_once_with()
         MOCK_PYMESSENGER_LIB.assert_called_once_with(self.config.auth_token)
 
     def testAddUserCmd(self):

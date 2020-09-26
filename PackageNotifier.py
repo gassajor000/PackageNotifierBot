@@ -13,12 +13,10 @@ from PNBDatabase import PNBDatabase, User, Package
 
 class PackageNotifier:
     class Config():
-        def __init__(self, auth_token, db_name, db_user, db_password, user_passphrase, admin_passphrase):
+        def __init__(self, auth_token, db_config: PNBDatabase.Config, user_passphrase, admin_passphrase):
             self.admin_passphrase = admin_passphrase
             self.user_passphrase = user_passphrase
-            self.db_password = db_password
-            self.db_user = db_user
-            self.db_name = db_name
+            self.db_config = db_config
             self.auth_token = auth_token
 
     HELP_TEXT = """Package Notifier Bot supports the following commands
@@ -42,8 +40,8 @@ Respond with 'claim package {:d}' to mark as collected"""
 
     def __init__(self, config: Config):
         self.config = config
-        self.db = PNBDatabase(config.db_name)
-        self.db.login(config.db_user, config.db_password)
+        self.db = PNBDatabase(config.db_config)
+        self.db.login()
 
         self.bot = Bot(config.auth_token)
 

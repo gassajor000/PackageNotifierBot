@@ -80,12 +80,34 @@ class Package:
 
 class PNBDatabase:
     """Manage connection to PostRegDB and provide wrapper for db operations"""
+    class Config():
+        def get_connect_args(self):
+            raise NotImplementedError("This is an abstract class!")
 
-    def __init__(self, db_name):
-        self.db_name = db_name
+    class URLConfig(Config):
+        def __init__(self, url):
+            self.url = url
 
-    def login(self, user, password):
-        self.conn = psycopg2.connect("dbname={} user={} password={}".format(self.db_name, user, password))
+        def get_connect_args(self):
+            return (self.url, ), {'sslmode': 'require'}
+
+    class CredentialsConfig():
+        def __init__(self, db_name, user, password):
+            self.password = password
+            self.user = user
+            self.db_name = db_name
+
+        def get_connect_args(self):
+            conn_str = "dbname={} user={} password={}".format(self.db_name, self.user,
+                                                                                self.password)
+            return (conn_str, ), {}
+
+    def __init__(self, config: Config):
+        self.config = config
+
+    def login(self):
+        args, kwargs = self.config.get_connect_args()
+        self.conn = psycopg2.connect(*args, **kwargs)
         self.cur = self.conn.cursor()
 
     def close(self):

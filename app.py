@@ -10,45 +10,52 @@ import threading
 import easyimap
 
 from PackageNotifier import PackageNotifier
+from PNBDatabase import PNBDatabase
 
 DEV_MODE = False
 
 
 class AppConfig():
-    def __init__(self, auth_token, verify_token, db_name, db_user, db_password, user_passphrase, admin_passphrase,
+    def __init__(self, auth_token, verify_token, db_config: PNBDatabase.Config, user_passphrase, admin_passphrase,
                  email_host, email_user, email_password):
         self.email_password = email_password
         self.email_user = email_user
         self.email_host = email_host
         self.admin_passphrase = admin_passphrase
         self.user_passphrase = user_passphrase
-        self.db_password = db_password
-        self.db_user = db_user
-        self.db_name = db_name
+        self.db_config = db_config
         self.verify_token = verify_token
         self.auth_token = auth_token
 
     def to_pn_config(self):
-        return PackageNotifier.Config(self.auth_token, self.db_name, self.db_user, self.db_password,
-                                      self.user_passphrase, self.admin_passphrase)
+        return PackageNotifier.Config(self.auth_token, self.db_config, self.user_passphrase, self.admin_passphrase)
 
     @classmethod
     def from_env_variables(cls):
-        for var in ['AUTH_TOKEN', 'DB_NAME', 'DB_USER', 'DB_PASSWORD', 'USER_PASSPHRASE', 'ADMIN_PASSPHRASE',
+        for var in ['AUTH_TOKEN', 'USER_PASSPHRASE', 'ADMIN_PASSPHRASE',
                     'EMAIL_HOST', 'EMAIL_USER', 'EMAIL_PASSWORD']:
             if var not in os.environ:
                 raise RuntimeError("Error, environment variable {} not set!".format(var))
 
+        if 'DATABASE_URL' in os.environ:
+            db_config = PNBDatabase.URLConfig(os.environ.get('DATABASE_URL'))
+        elif all([var in os.environ for var in ['DB_NAME', 'DB_USER', 'DB_PASSWORD']]):
+            db_config = PNBDatabase.CredentialsConfig(os.environ.get('DB_NAME'), os.environ.get('DB_USER'),
+                                                   os.environ.get('DB_PASSWORD'))
+        else:
+            raise RuntimeError('ERROR! No database variables are set!')
+
         return AppConfig(os.environ.get('AUTH_TOKEN'), os.environ.get('VERIFY_TOKEN'),
-                         os.environ.get('DB_NAME'), os.environ.get('DB_USER'), os.environ.get('DB_PASSWORD'),
+                         db_config,
                          os.environ.get('USER_PASSPHRASE'), os.environ.get('ADMIN_PASSPHRASE'),
                          os.environ.get('EMAIL_HOST'), os.environ.get('EMAIL_USER'), os.environ.get('EMAIL_PASSWORD'))
 
     @classmethod
     def from_file(cls, file):
         data = json.load(open(file))
+        db_config = PNBDatabase.CredentialsConfig(data['DB_NAME'], data['DB_USER'], data['DB_PASSWORD'])
         return AppConfig(data['AUTH_TOKEN'], data['VERIFY_TOKEN'],
-                         data['DB_NAME'], data['DB_USER'], data['DB_PASSWORD'],
+                         db_config,
                          data['USER_PASSPHRASE'], data['ADMIN_PASSPHRASE'],
                          data['EMAIL_HOST'], data['EMAIL_USER'], data['EMAIL_PASSWORD'])
 

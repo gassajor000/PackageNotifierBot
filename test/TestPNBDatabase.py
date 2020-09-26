@@ -13,10 +13,12 @@ from PNBDatabase import PNBDatabase, User, Package
 class TestPNBDatabase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.db = PNBDatabase('pnb_test')
-        cls.db.login('test_pnb', 'secret_pwd')
+        cls.db_config = PNBDatabase.CredentialsConfig('pnb_test', 'test_pnb', 'secret_pwd')
+        cls.test_config = PNBDatabase.CredentialsConfig('pnb_test', 'tester', 'tester')
+        cls.db = PNBDatabase(cls.db_config)
 
-        cls.conn = psycopg2.connect("dbname={} user={} password={}".format('pnb_test', 'tester', 'tester'))
+        cls.conn = psycopg2.connect("dbname={} user={} password={}".format(cls.test_config.db_name, cls.test_config.user,
+                                                                           cls.test_config.password))
         cls.cur = cls.conn.cursor()
 
     def setUp(self):
@@ -51,12 +53,15 @@ class TestPNBDatabase(unittest.TestCase):
                                                                                                          self.test_package2.collected))
 
         self.conn.commit()
+        self.db.login()
 
     @classmethod
     def tearDownClass(cls):
-        cls.db.close()
         cls.cur.close()
         cls.conn.close()
+
+    def tearDown(self):
+        self.db.close()
 
     def testAddUser(self):
         """addUser adds a user to the Users group"""

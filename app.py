@@ -38,7 +38,11 @@ class AppConfig():
 
     @classmethod
     def from_file(cls, file):
-        return AppConfig()
+        data = json.load(open(file))
+        return AppConfig(data['AUTH_TOKEN'], data['VERIFY_TOKEN'],
+                         data['DB_NAME'], data['DB_USER'], data['DB_PASSWORD'],
+                         data['USER_PASSPHRASE'], data['ADMIN_PASSPHRASE'],
+                         data['EMAIL_HOST'], data['EMAIL_USER'], data['EMAIL_PASSWORD'])
 
 
 if DEV_MODE:

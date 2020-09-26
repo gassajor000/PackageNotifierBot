@@ -143,7 +143,9 @@ class TestPackageNotifier(unittest.TestCase):
         cls.test_user4 = User.newAdmin('104', 'Allison Hargreaves')
 
         cls.globals = [MOCK_DB, MOCK_BOT, MOCK_PNBDATABASE_LIB, MOCK_PYMESSENGER_LIB]
-
+        cls.config = PackageNotifier.Config('test_auth_token', 'test_db_name', 'test_db_user', 'test_db_pwd',
+                                            'user_pwd', 'admin_pwd')
+        
         users = {
             '101': cls.test_user1,
             '102': cls.test_user2,
@@ -175,18 +177,18 @@ class TestPackageNotifier(unittest.TestCase):
 
     def testInit(self):
         """PackageNotifier correctly initialized database & Bot"""
-        pn = PackageNotifier('test_auth_token')
+        pn = PackageNotifier(self.config)
 
-        MOCK_PNBDATABASE_LIB.assert_called_once_with('pnb_test')
-        MOCK_DB.login.assert_called_once_with('test_pnb', 'secret_pwd')
-        MOCK_PYMESSENGER_LIB.assert_called_once_with('test_auth_token')
+        MOCK_PNBDATABASE_LIB.assert_called_once_with(self.config.db_name)
+        MOCK_DB.login.assert_called_once_with(self.config.db_user, self.config.db_password)
+        MOCK_PYMESSENGER_LIB.assert_called_once_with(self.config.auth_token)
 
     def testAddUserCmd(self):
         """PackageNotifier successfully ads a new user or admin"""
-        pn = PackageNotifier('test_auth_token')
+        pn = PackageNotifier(self.config)
 
         # Add a user
-        msg = FakeMessage(self.test_user4, 'hedwig')
+        msg = FakeMessage(self.test_user4, self.config.user_passphrase)
         pn.handle_message(msg)
         self.assertEqual(MOCK_DB._addUser.call_count, 1)
         self.assertIn(self.test_user4.PFID, MOCK_DB.users, "User was not added to the user table")
@@ -197,7 +199,7 @@ class TestPackageNotifier(unittest.TestCase):
         MOCK_DB.reset()
 
         # add an admin
-        msg = FakeMessage(self.test_user4, 'errol')
+        msg = FakeMessage(self.test_user4, self.config.admin_passphrase)
         pn.handle_message(msg)
         self.assertEqual(MOCK_DB._addUser.call_count, 1)
         self.assertIn(self.test_user4.PFID, MOCK_DB.users, "Admin was not added to the user table")
@@ -207,7 +209,7 @@ class TestPackageNotifier(unittest.TestCase):
 
     def testHelpCmd(self):
         """Help command returns help text. Help text for users does not include admin commands."""
-        pn = PackageNotifier('test_auth_token')
+        pn = PackageNotifier(self.config)
 
         user_cmds = ['list packages', 'claim package', 'unsubscribe', 'help']
         admin_cmds = user_cmds + ['list users', 'remove user']
@@ -236,7 +238,7 @@ class TestPackageNotifier(unittest.TestCase):
 
     def testListPackagesCmd(self):
         """list packages will list all unclaimed packages"""
-        pn = PackageNotifier('test_auth_token')
+        pn = PackageNotifier(self.config)
 
         # Add a user
         msg = FakeMessage(self.test_user1, 'list packages')
@@ -250,7 +252,7 @@ class TestPackageNotifier(unittest.TestCase):
 
     def testClaimPackageCmd(self):
         """claim package will mark the package as collected"""
-        pn = PackageNotifier('test_auth_token')
+        pn = PackageNotifier(self.config)
 
         # Claim a package
         msg = FakeMessage(self.test_user1, 'claim package {:d}'.format(self.test_package1.id))
@@ -261,7 +263,7 @@ class TestPackageNotifier(unittest.TestCase):
 
     def testUnsubscribeCmd(self):
         """unsubscribe removes the user from the system"""
-        pn = PackageNotifier('test_auth_token')
+        pn = PackageNotifier(self.config)
 
         # Unsubscribe
         msg = FakeMessage(self.test_user1, 'unsubscribe')
@@ -271,7 +273,7 @@ class TestPackageNotifier(unittest.TestCase):
 
     def testRemoveUserCmd(self):
         """remove user removes a user from the system. Cannot be called by non-admin."""
-        pn = PackageNotifier('test_auth_token')
+        pn = PackageNotifier(self.config)
 
         # Try removing user with User privileges
         msg = FakeMessage(self.test_user2, 'remove user Luther Hargreaves')
@@ -288,7 +290,7 @@ class TestPackageNotifier(unittest.TestCase):
 
     def testListUsersCmd(self):
         """list users lists all active users. Cannot be called by non-admin."""
-        pn = PackageNotifier('test_auth_token')
+        pn = PackageNotifier(self.config)
 
         # List users w/ user privileges
         msg = FakeMessage(self.test_user2, 'list users')
@@ -310,7 +312,7 @@ class TestPackageNotifier(unittest.TestCase):
 
     def testHandleEmail(self):
         """handle_email adds the new package to the db and messages all active users."""
-        pn = PackageNotifier('test_auth_token')
+        pn = PackageNotifier(self.config)
 
         # Different possible email formats
         emails = [
@@ -336,10 +338,10 @@ class TestPackageNotifier(unittest.TestCase):
 
     def testGetUserName(self):
         """when creating a new user, PackageNotifier correctly queries the Facebook API for the full name"""
-        pn = PackageNotifier('test_auth_token')
+        pn = PackageNotifier(self.config)
 
         # Add a user
-        msg = FakeMessage(self.test_user4, 'hedwig')
+        msg = FakeMessage(self.test_user4, self.config.user_passphrase)
         pn.handle_message(msg)
         MOCK_REQUESTS_LIB._get.assert_called_once_with(
             "https://graph.facebook.com/{}?fields=first_name,last_name&access_token={}".format(self.test_user4.PFID,
@@ -350,7 +352,7 @@ class TestPackageNotifier(unittest.TestCase):
         MOCK_DB.reset()
 
         # add an admin
-        msg = FakeMessage(self.test_user4, 'errol')
+        msg = FakeMessage(self.test_user4, self.config.admin_passphrase)
         pn.handle_message(msg)
         MOCK_REQUESTS_LIB._get.assert_called_once_with(
             "https://graph.facebook.com/{}?fields=first_name,last_name&access_token={}".format(self.test_user4.PFID,
@@ -359,7 +361,7 @@ class TestPackageNotifier(unittest.TestCase):
 
     def testUnknownUser(self):
         """No commands work if a user is not registered"""
-        pn = PackageNotifier('test_auth_token')
+        pn = PackageNotifier(self.config)
 
         cmds = ['list users', 'list packages', 'claim package 2',
                 'remove user Luther Hargreaves', 'unsubscribe', 'help']

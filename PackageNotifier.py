@@ -7,10 +7,20 @@ import re
 
 import requests
 from pymessenger.bot import Bot
+
 from PNBDatabase import PNBDatabase, User, Package
 
 
 class PackageNotifier:
+    class Config():
+        def __init__(self, auth_token, db_name, db_user, db_password, user_passphrase, admin_passphrase):
+            self.admin_passphrase = admin_passphrase
+            self.user_passphrase = user_passphrase
+            self.db_password = db_password
+            self.db_user = db_user
+            self.db_name = db_name
+            self.auth_token = auth_token
+
     HELP_TEXT = """Package Notifier Bot supports the following commands
     * list packages - list all uncollected packages
     * help - show this help menu
@@ -28,14 +38,14 @@ Respond with 'claim package {:d}' to mark as collected"""
 
     FB_PROFILE_INFO_URL = "https://graph.facebook.com/{}?fields={}&access_token={}"
 
-    PACKAGE_CODE_RE = re.compile('([pP]ickup [cC]ode)\s*([0-9]+)')
+    PACKAGE_CODE_RE = re.compile('([pP]ickup [cC]ode)\\s*([0-9]+)')
 
-    def __init__(self, auth_token):
-        self.db = PNBDatabase('pnb_test')
-        self.db.login('test_pnb', 'secret_pwd')
-        self.auth_token = auth_token
+    def __init__(self, config: Config):
+        self.config = config
+        self.db = PNBDatabase(config.db_name)
+        self.db.login(config.db_user, config.db_password)
 
-        self.bot = Bot(auth_token)
+        self.bot = Bot(config.auth_token)
 
     def handle_message(self, message):
         """Handle a new message sent from messenger"""
@@ -46,7 +56,7 @@ Respond with 'claim package {:d}' to mark as collected"""
         text = message['message'].get('text').lower()
         if text:
             # process menu command
-            if text == 'hedwig' and user is None:
+            if text == self.config.user_passphrase and user is None:
                 # add user to database
                 sender_name = self.get_user_name(sender_pfid)
                 self.db.addUser(User.newUser(sender_pfid, sender_name))
@@ -54,7 +64,7 @@ Respond with 'claim package {:d}' to mark as collected"""
                 # respond
                 self.bot.send_text_message(sender_pfid, 'New User added')
 
-            elif text == 'errol' and user is None:
+            elif text == self.config.admin_passphrase and user is None:
                 # add admin to database
                 sender_name = self.get_user_name(sender_pfid)
                 self.db.addUser(User.newAdmin(sender_pfid, sender_name))
@@ -66,7 +76,6 @@ Respond with 'claim package {:d}' to mark as collected"""
                 self.handle_cmd(text, user)
             else:
                 self.bot.send_text_message(sender_pfid, self.HELP_TEXT_UNVERIFIED)
-
 
         # if user sends us a GIF, photo,video, or any other non-text item
         if message['message'].get('attachments'):
@@ -122,7 +131,6 @@ Respond with 'claim package {:d}' to mark as collected"""
             # Send Error response
             self.bot.send_text_message(sender.PFID, self.UNKNOWN_CMD_TEXT)
 
-
     def handle_email(self, email):
         """Handle a new email fetched from the server"""
         # get code from email
@@ -149,6 +157,6 @@ Respond with 'claim package {:d}' to mark as collected"""
             self.bot.send_text_message(user.PFID, msg)
 
     def get_user_name(self, pfid):
-        data = requests.get(self.FB_PROFILE_INFO_URL.format(pfid, 'first_name,last_name', self.auth_token)).json()
+        data = requests.get(self.FB_PROFILE_INFO_URL.format(pfid, 'first_name,last_name', self.config.auth_token)).json()
         return data['first_name'] + ' ' + data['last_name']
 

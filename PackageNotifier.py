@@ -52,6 +52,9 @@ Respond with 'claim package {:d}' to mark as collected"""
         user = self.db.getUser(sender_pfid)
 
         text = message['message'].get('text').lower()
+        print("New message {} {!r}".format(text, text))
+        print("Passphrases {} {!r} {} {!r}".format(self.config.user_passphrase, self.config.user_passphrase,
+                                                    self.config.admin_passphrase, self.config.admin_passphrase))
         if text:
             # process menu command
             if text == self.config.user_passphrase and user is None:

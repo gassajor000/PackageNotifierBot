@@ -74,7 +74,6 @@ class Package:
 
     @classmethod
     def set_next_id(cls, next_id):
-        """This is necessary because resetting the server will reset next_id to 0, leading to duplicate package ids."""
         cls.next_id = next_id
 
     @classmethod
@@ -116,6 +115,7 @@ class PNBDatabase:
         self.conn = psycopg2.connect(*args, **kwargs)
         self.cur = self.conn.cursor()
 
+        # This is necessary because resetting the server will reset next_id to 0, leading to duplicate package ids
         Package.set_next_id(self._get_max_package_id() + 1)
 
     def close(self):
@@ -195,7 +195,7 @@ class PNBDatabase:
 
     def _get_max_package_id(self):
         """Return the largest package id in the database"""
-        self.cur.execute("SELECT MAX(id)FROM packages")
+        self.cur.execute("SELECT MAX(id) FROM packages")
         return int(self.cur.fetchone()[0])
 
 

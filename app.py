@@ -34,7 +34,15 @@ class AppConfig():
 
     @classmethod
     def from_env_variables(cls):
-        return AppConfig()
+        for var in ['AUTH_TOKEN', 'DB_NAME', 'DB_USER', 'DB_PASSWORD', 'USER_PASSPHRASE', 'ADMIN_PASSPHRASE',
+                    'EMAIL_HOST', 'EMAIL_USER', 'EMAIL_PASSWORD']:
+            if var not in os.environ:
+                raise RuntimeError("Error, environment variable {} not set!".format(var))
+
+        return AppConfig(os.environ.get('AUTH_TOKEN'), os.environ.get('VERIFY_TOKEN'),
+                         os.environ.get('DB_NAME'), os.environ.get('DB_USER'), os.environ.get('DB_PASSWORD'),
+                         os.environ.get('USER_PASSPHRASE'), os.environ.get('ADMIN_PASSPHRASE'),
+                         os.environ.get('EMAIL_HOST'), os.environ.get('EMAIL_USER'), os.environ.get('EMAIL_PASSWORD'))
 
     @classmethod
     def from_file(cls, file):

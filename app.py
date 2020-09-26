@@ -105,6 +105,7 @@ def verify_fb_token(token_sent):
 
 def check_for_emails():
     global imap
+    print("Starting email thread")
 
     while True:
         try:
@@ -117,7 +118,7 @@ def check_for_emails():
                         packageNotifier.handle_email(email)
 
             else:
-                # print('no new emails')
+                print('no new emails')
                 pass
             time.sleep(20)
         except IMAP4.abort:
